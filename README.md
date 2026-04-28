@@ -790,7 +790,7 @@ For support, questions, or bug reports:
 
 ### ⭐ If you find this project helpful, please give it a star!
 
-Made with ❤️ by [Shreekrishna Patil](https://github.com/Shreekrishnapatil7588)
+Made by [Shreekrishna Patil](https://github.com/Shreekrishnapatil7588)
 
 [Back to Top](#-smart-hostel-complaint-management-system)
 
