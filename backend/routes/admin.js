@@ -6,7 +6,8 @@ const {
   getDashboard, getAllComplaints, getAdminComplaintDetail, updateComplaint,
   getAllUsers, createUser, updateUser, deleteUser, toggleUserActive, getUserById, getStaffList,
   getPrivileges, grantPrivilege, revokePrivilege,
-  getReportStats, getReportPending, exportCSV
+  getReportStats, getReportPending, exportCSV,
+  backupDatabase, restoreDatabase
 } = require('../controllers/adminController');
 
 router.use(authMiddleware, roleGuard('admin'));
@@ -37,5 +38,9 @@ router.post('/privileges/revoke',  revokePrivilege);
 router.get('/reports/stats',       getReportStats);
 router.get('/reports/pending',     getReportPending);
 router.get('/reports/export',      exportCSV);
+
+// Database Maintenance
+router.post('/backup',             backupDatabase);
+router.post('/restore',            restoreDatabase);
 
 module.exports = router;

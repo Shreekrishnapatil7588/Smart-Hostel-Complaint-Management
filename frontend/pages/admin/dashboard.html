@@ -85,6 +85,9 @@
               <a href="/admin/user-management" class="btn btn-ghost" style="justify-content:flex-start;">👥 Manage Users</a>
               <a href="/admin/privilege-manager" class="btn btn-ghost" style="justify-content:flex-start;">🔐 Privilege Manager</a>
               <a href="/admin/reports" class="btn btn-ghost" style="justify-content:flex-start;">📈 Reports &amp; Export</a>
+              <hr class="divider" style="margin:4px 0;">
+              <button onclick="triggerBackup()" class="btn btn-primary btn-sm" style="justify-content:flex-start;">💾 Force Backup Sync</button>
+              <button onclick="triggerRestore()" class="btn btn-outline btn-sm" style="justify-content:flex-start;color:var(--text-danger);border-color:var(--text-danger);">🔄 Restore From Backup</button>
             </div>
           </div>
         </div>
@@ -212,6 +215,37 @@
     if (!e.target.closest('#notifBell') && !e.target.closest('#notifDropdown'))
       document.getElementById('notifDropdown')?.classList.remove('open');
   });
+
+  async function triggerBackup() {
+    if(!confirm('This will wipe the current backup database and clone everything from the main database. Proceed?')) return;
+    toast.info('Syncing to backup database, please wait...');
+    try {
+      const resp = await api.post('/api/admin/backup');
+      if (resp && resp.success) {
+        toast.success(resp.message || 'Backup synced successfully!');
+      } else {
+        toast.error(resp?.message || 'Failed to sync backup.');
+      }
+    } catch(e) {
+      toast.error('Error occurred syncing backup.');
+    }
+  }
+
+  async function triggerRestore() {
+    if(!confirm('WARNING: Restoring will OVERWRITE the main live database with data from the backup database. Are you absolutely sure?')) return;
+    toast.info('Restoring from backup database, please wait...');
+    try {
+      const resp = await api.post('/api/admin/restore');
+      if (resp && resp.success) {
+        toast.success(resp.message || 'Database restored successfully!');
+        setTimeout(() => location.reload(), 1500);
+      } else {
+        toast.error(resp?.message || 'Restore failed.');
+      }
+    } catch(e) {
+      toast.error('Error occurred during restore.');
+    }
+  }
 </script>
 </body>
 </html>

@@ -1,4 +1,8 @@
 const db     = require('../db/db');
+const mysqldump = require('mysqldump');
+const mysql     = require('mysql2/promise');
+const fs        = require('fs');
+const path      = require('path');
 
 // ─── GET /api/admin/dashboard ──────────────────────────────────
 const getDashboard = async (req, res) => {
@@ -488,9 +492,83 @@ const exportCSV = async (req, res) => {
   }
 };
 
+// ─── DATABASE CLONING HELPER ──────────────────────────────────
+const cloneDatabase = async (fromDb, toDb) => {
+  const timestamp = new Date().getTime();
+  const dumpFile = path.join(__dirname, '..', `clone-${fromDb}-${timestamp}.sql`);
+  
+  await mysqldump({
+    connection: {
+      host: process.env.DB_HOST || 'localhost',
+      port: process.env.DB_PORT || 3306,
+      user: process.env.DB_USER || 'root',
+      password: process.env.DB_PASSWORD || 'root',
+      database: fromDb,
+    },
+    dumpToFile: dumpFile,
+    dump: {
+      schema: {
+        table: {
+          dropIfExist: true
+        }
+      }
+    }
+  });
+
+  const sqlScript = fs.readFileSync(dumpFile, 'utf8');
+
+  const toConn = await mysql.createConnection({
+    host: process.env.DB_HOST || 'localhost',
+    port: process.env.DB_PORT || 3306,
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || 'root',
+    database: toDb,
+    multipleStatements: true,
+    timezone: '+00:00'
+  });
+
+  await toConn.query(sqlScript);
+  await toConn.end();
+
+  if (fs.existsSync(dumpFile)) {
+    fs.unlinkSync(dumpFile);
+  }
+};
+
+// ─── POST /api/admin/backup ───────────────────────────────────
+const backupDatabase = async (req, res) => {
+  try {
+    const mainDb = process.env.DB_NAME || 'hostel_db';
+    const backupDb = db.backupDbName || `${mainDb}_backup`;
+    
+    await cloneDatabase(mainDb, backupDb);
+
+    return res.json({ success: true, message: 'Database manual backup synchronization complete!' });
+  } catch (err) {
+    console.error('Backup error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to synchronize backup database.' });
+  }
+};
+
+// ─── POST /api/admin/restore ──────────────────────────────────
+const restoreDatabase = async (req, res) => {
+  try {
+    const mainDb = process.env.DB_NAME || 'hostel_db';
+    const backupDb = db.backupDbName || `${mainDb}_backup`;
+    
+    await cloneDatabase(backupDb, mainDb);
+
+    return res.json({ success: true, message: 'Main database completely restored from backup database!' });
+  } catch (err) {
+    console.error('Restore error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to restore database from backup.' });
+  }
+};
+
 module.exports = {
   getDashboard, getAllComplaints, getAdminComplaintDetail, updateComplaint,
   getAllUsers, createUser, updateUser, deleteUser, toggleUserActive, getUserById, getStaffList,
   getPrivileges, grantPrivilege, revokePrivilege,
-  getReportStats, getReportPending, exportCSV
+  getReportStats, getReportPending, exportCSV,
+  backupDatabase, restoreDatabase
 };
